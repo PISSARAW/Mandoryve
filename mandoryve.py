@@ -76,12 +76,35 @@ def verify(case):
     return {"status": "deviation" if differences else "conformant", "differences": differences}
 
 
+def evidence(case, report, case_id, uncertainty):
+    text_id(case_id)
+    if uncertainty < 0:
+        raise ValueError("incertitude négative")
+    rows = []
+    for difference in report.get("differences", []):
+        rows.append({"kind": "access", "subject": {k: difference[k] for k in ("user", "folder", "permission")},
+                     "facts": {"expected": difference["expected_until"], "observed": difference["observed_until"]}})
+    if not rows:
+        # Une vérification complète sans écart et une observation indisponible ont des sens distincts.
+        kind = "verified" if report["status"] == "conformant" else "unavailable"
+        rows.append({"kind": kind, "facts": {}})
+    for i, row in enumerate(rows, 1):
+        row.update(id=f"mandoryve-{i}", time_s=case["observed_at"], uncertainty_s=uncertainty)
+    return {"schema": "evidence.v1", "source": "mandoryve", "case_id": case_id, "events": rows}
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("case", type=Path)
+    parser.add_argument("--evidence", metavar="CASE_ID", help="exporter les observations evidence.v1")
+    parser.add_argument("--uncertainty-s", type=int, default=0)
     args = parser.parse_args()
     try:
-        report = verify(json.loads(args.case.read_text()))
+        case = json.loads(args.case.read_text())
+        report = verify(case)
+        if args.evidence is not None:
+            print(json.dumps(evidence(case, report, args.evidence, args.uncertainty_s), ensure_ascii=False))
+            raise SystemExit(0)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.exit(2, f"Mandat invalide ({exc})\n")
     print(json.dumps(report, indent=2, ensure_ascii=False))

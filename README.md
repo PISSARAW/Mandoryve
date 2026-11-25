@@ -35,3 +35,13 @@ Les instants sont des entiers sur la même échelle. Les droits expirent à la b
 ## Premier chantier à reprendre
 
 Écrire un adaptateur de relecture indépendante sur une application de démonstration. Introduire une modification concurrente et conserver les identifiants de révision pour distinguer différence d’état et attribution.
+
+## Publier les observations d’accès
+
+Le lot privé `evidence.v1` expose les droits attendus et observés pour chaque écart. Un contrôle conforme ou inexploitable donne une observation de synthèse distincte. Le champ `observed_at` du dossier et l’heure utilisée par Revaskel doivent partager la même origine.
+
+```sh
+python3 -m mandoryve examples/group.json --evidence exercice-01 --uncertainty-s 1 > droits.json
+```
+
+L’exercice complet se lance avec `make demo-suite` depuis [Horvessane](https://github.com/PISSARAW/Horvessane).
