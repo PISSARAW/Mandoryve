@@ -1,0 +1,62 @@
+{
+  "observed_at": 10,
+  "mandate": {
+    "users": [
+      "lea",
+      "sam"
+    ],
+    "folder": "client",
+    "until": 80
+  },
+  "before": {
+    "users": {
+      "lea": [],
+      "sam": []
+    },
+    "groups": {
+      "support": [
+        {
+          "folder": "client",
+          "permission": "read",
+          "until": 80
+        },
+        {
+          "folder": "interne",
+          "permission": "read",
+          "until": 80
+        }
+      ]
+    },
+    "direct": []
+  },
+  "after": {
+    "users": {
+      "lea": [
+        "support"
+      ],
+      "sam": []
+    },
+    "groups": {
+      "support": [
+        {
+          "folder": "client",
+          "permission": "read",
+          "until": 80
+        },
+        {
+          "folder": "interne",
+          "permission": "read",
+          "until": 80
+        }
+      ]
+    },
+    "direct": [
+      {
+        "user": "sam",
+        "folder": "client",
+        "permission": "read",
+        "until": 80
+      }
+    ]
+  }
+}
