@@ -16,10 +16,14 @@ def tick(value):
     return value
 
 
+def validate_collections(users, groups, direct):
+    if not isinstance(users, dict) or not isinstance(groups, dict) or not isinstance(direct, list):
+        raise ValueError("collections d’observation invalides")
+
+
 def effective(snapshot, now):
     users, groups = snapshot["users"], snapshot["groups"]
-    if not isinstance(users, dict) or not isinstance(groups, dict) or not isinstance(snapshot["direct"], list):
-        raise ValueError("collections d’observation invalides")
+    validate_collections(users, groups, snapshot["direct"])
     rights = {}
 
     def add(user, grant):
@@ -49,6 +53,19 @@ def effective(snapshot, now):
     return rights
 
 
+def subjects_observed(case, people):
+    return all(set(people) <= case[stage]["users"].keys() for stage in ("before", "after"))
+
+
+def compare_rights(expected, after):
+    differences = []
+    for key in sorted(expected.keys() | after.keys()):
+        if expected.get(key) != after.get(key):
+            differences.append({"user": key[0], "folder": key[1], "permission": key[2],
+                                "expected_until": expected.get(key), "observed_until": after.get(key)})
+    return differences
+
+
 def verify(case):
     now = tick(case["observed_at"])
     mandate = case["mandate"]
@@ -60,7 +77,7 @@ def verify(case):
     try:
         before = effective(case["before"], now)
         after = effective(case["after"], now)
-        if any(user not in case[stage]["users"] for stage in ("before", "after") for user in people):
+        if not subjects_observed(case, people):
             raise ValueError("sujet du mandat absent de l’observation")
     except (KeyError, TypeError, ValueError, AttributeError) as exc:
         return {"status": "unverifiable", "reason": f"observation incomplète ou invalide ({exc})"}
@@ -68,15 +85,12 @@ def verify(case):
     expected = before.copy()
     for key in target:
         expected[key] = max(expiry, before.get(key, expiry))
-    differences = []
-    for key in sorted(expected.keys() | after.keys()):
-        if expected.get(key) != after.get(key):
-            differences.append({"user": key[0], "folder": key[1], "permission": key[2],
-                                "expected_until": expected.get(key), "observed_until": after.get(key)})
+    differences = compare_rights(expected, after)
     return {"status": "deviation" if differences else "conformant", "differences": differences}
 
 
-def evidence(case, report, case_id, uncertainty):
+def evidence(case, case_id, uncertainty):
+    report = verify(case)
     text_id(case_id)
     if uncertainty < 0:
         raise ValueError("incertitude négative")
@@ -101,10 +115,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     try:
         case = json.loads(args.case.read_text())
-        report = verify(case)
         if args.evidence is not None:
-            print(json.dumps(evidence(case, report, args.evidence, args.uncertainty_s), ensure_ascii=False))
+            print(json.dumps(evidence(case, args.evidence, args.uncertainty_s), ensure_ascii=False))
             raise SystemExit(0)
+        report = verify(case)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.exit(2, f"Mandat invalide ({exc})\n")
     print(json.dumps(report, indent=2, ensure_ascii=False))
